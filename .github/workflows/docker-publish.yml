@@ -36,11 +36,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
       - name: Login to Docker Hub
         env:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -49,8 +44,5 @@ jobs:
 
       - name: Build and Push Container
         run: |
-          dotnet publish src/OpusToMp3.Api/OpusToMp3.Api.csproj \
-            --os linux --arch x64 \
-            -c Release \
-            /t:PublishContainer \
-            -p ContainerRegistry=docker.io
+          docker build -t mariogk/opus-to-mp3:latest .
+          docker push mariogk/opus-to-mp3:latest
