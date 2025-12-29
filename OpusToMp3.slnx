@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpusToMp3.Api/OpusToMp3.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpusToMp3.Tests/OpusToMp3.Tests.csproj" />
+  </Folder>
+</Solution>
