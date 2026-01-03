@@ -12,28 +12,28 @@ public class AudioConverterServiceTests
     [Test]
     public async Task ConvertOpusToMp3_WithNullInput_ThrowsArgumentException()
     {
-        await Assert.That(() => _service.ConvertOpusToMp3(null!))
+        await Assert.That(async () => await _service.ConvertOpusToMp3Async(null!))
             .Throws<ArgumentException>();
     }
 
     [Test]
     public async Task ConvertOpusToMp3_WithEmptyInput_ThrowsArgumentException()
     {
-        await Assert.That(() => _service.ConvertOpusToMp3(string.Empty))
+        await Assert.That(async () => await _service.ConvertOpusToMp3Async(string.Empty))
             .Throws<ArgumentException>();
     }
 
     [Test]
     public async Task ConvertOpusToMp3_WithWhitespaceInput_ThrowsArgumentException()
     {
-        await Assert.That(() => _service.ConvertOpusToMp3("   "))
+        await Assert.That(async () => await _service.ConvertOpusToMp3Async("   "))
             .Throws<ArgumentException>();
     }
 
     [Test]
     public async Task ConvertOpusToMp3_WithInvalidBase64_ThrowsFormatException()
     {
-        await Assert.That(() => _service.ConvertOpusToMp3("not-valid-base64!!!"))
+        await Assert.That(async () => await _service.ConvertOpusToMp3Async("not-valid-base64!!!"))
             .Throws<FormatException>();
     }
 
@@ -42,7 +42,7 @@ public class AudioConverterServiceTests
     {
         var opusBase64 = GenerateTestOpusBase64();
 
-        var result = _service.ConvertOpusToMp3(opusBase64);
+        var result = await _service.ConvertOpusToMp3Async(opusBase64);
 
         await Assert.That(result).IsNotNull();
         await Assert.That(result.Length).IsGreaterThan(0);
@@ -56,7 +56,7 @@ public class AudioConverterServiceTests
     {
         var opusBase64 = GenerateTestOpusBase64();
 
-        var result = _service.ConvertOpusToMp3(opusBase64);
+        var result = await _service.ConvertOpusToMp3Async(opusBase64);
         var mp3Bytes = Convert.FromBase64String(result);
 
         // MP3 files start with either ID3 tag (0x49, 0x44, 0x33) or frame sync (0xFF, 0xFB)
@@ -81,7 +81,7 @@ public class AudioConverterServiceTests
         var opusBytes = await File.ReadAllBytesAsync(opusFilePath);
         var opusBase64 = Convert.ToBase64String(opusBytes);
 
-        var result = _service.ConvertOpusToMp3(opusBase64);
+        var result = await _service.ConvertOpusToMp3Async(opusBase64);
 
         await Assert.That(result).IsNotNull();
         await Assert.That(result.Length).IsGreaterThan(0);

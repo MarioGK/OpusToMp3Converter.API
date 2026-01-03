@@ -6,11 +6,5 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Concentus" Version="2.2.2" />
-    <PackageReference Include="Concentus.Oggfile" Version="1.0.6" />
-    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
-    <PackageReference Include="NAudio.Lame.CrossPlatform" Version="2.2.1" />
-  </ItemGroup>
 
 </Project>

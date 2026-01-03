@@ -1,61 +1,57 @@
-using System.Buffers;
-using Concentus;
-using Concentus.Oggfile;
-using Microsoft.IO;
-using NAudio.Lame;
-using NAudio.Wave;
+using System.Diagnostics;
 
 namespace OpusToMp3.Api.Services;
 
 public sealed class AudioConverterService
 {
-    private static readonly RecyclableMemoryStreamManager StreamManager = new();
-
-    private const int OpusSampleRate = 48000;
-    private const int OpusChannels = 2;
+    private const string TempDirectory = "/dev/shm";
     private const int Mp3BitRate = 128;
-    private const int PcmBufferSize = 5760;
 
-    public string ConvertOpusToMp3(string opusBase64)
+    public async Task<string> ConvertOpusToMp3Async(string opusBase64)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(opusBase64);
 
         var opusBytes = Convert.FromBase64String(opusBase64);
-
-        using var opusStream = StreamManager.GetStream("OpusInput", opusBytes, 0, opusBytes.Length);
-        using var mp3Stream = StreamManager.GetStream("Mp3Output");
-
-        ConvertOpusStreamToMp3(opusStream, mp3Stream);
-
-        return Convert.ToBase64String(mp3Stream.GetBuffer(), 0, (int)mp3Stream.Length);
-    }
-
-    private static void ConvertOpusStreamToMp3(Stream opusStream, MemoryStream mp3Stream)
-    {
-        var decoder = OpusCodecFactory.CreateDecoder(OpusSampleRate, OpusChannels);
-        var oggReader = new OpusOggReadStream(decoder, opusStream);
-
-        var waveFormat = new WaveFormat(OpusSampleRate, 16, OpusChannels);
-        using var mp3Writer = new LameMP3FileWriter(mp3Stream, waveFormat, Mp3BitRate);
-
-        var byteBuffer = ArrayPool<byte>.Shared.Rent(PcmBufferSize * OpusChannels * sizeof(short));
+        var fileId = Guid.NewGuid().ToString("N");
+        var inputPath = Path.Combine(TempDirectory, $"{fileId}.opus");
+        var outputPath = Path.Combine(TempDirectory, $"{fileId}.mp3");
 
         try
         {
-            while (oggReader.HasNextPacket)
-            {
-                var samples = oggReader.DecodeNextPacket();
-                if (samples == null || samples.Length == 0)
-                    continue;
+            await File.WriteAllBytesAsync(inputPath, opusBytes);
 
-                var byteCount = samples.Length * sizeof(short);
-                Buffer.BlockCopy(samples, 0, byteBuffer, 0, byteCount);
-                mp3Writer.Write(byteBuffer, 0, byteCount);
-            }
+            await RunFfmpegAsync(inputPath, outputPath);
+
+            var mp3Bytes = await File.ReadAllBytesAsync(outputPath);
+            return Convert.ToBase64String(mp3Bytes);
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(byteBuffer);
+            if (File.Exists(inputPath)) File.Delete(inputPath);
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+        }
+    }
+
+    private static async Task RunFfmpegAsync(string inputPath, string outputPath)
+    {
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo
+        {
+            FileName = "ffmpeg",
+            Arguments = $"-i \"{inputPath}\" -b:a {Mp3BitRate}k -y \"{outputPath}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        process.Start();
+        await process.WaitForExitAsync();
+
+        if (process.ExitCode != 0)
+        {
+            var error = await process.StandardError.ReadToEndAsync();
+            throw new InvalidOperationException($"FFmpeg failed with exit code {process.ExitCode}: {error}");
         }
     }
 }
